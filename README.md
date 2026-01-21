@@ -1,54 +1,60 @@
-# Bellringer – Terminál alapú csengővezérlő rendszer
+# **Bellringer – Terminal‑based Bell Control System**
 
-A Bellringer egy Raspberry Pi Pico-val és/vagy MP3 lejátszással működő csengő vagy relé vezérlőrendszer.  
-A kezelőfelület terminálon fut, a tview könyvtárra épül, és teljes egészében billentyűzetről használható.
+Bellringer is a bell or relay control system that works with a Raspberry Pi Pico and/or MP3 playback.  
+The user interface runs in the terminal, is built on the tview library, and is fully operable from the keyboard.
 
-## Fő funkciók
+---
 
-### Időzítések
-- Időpontok hozzáadása (HH:MM:SS)
-- Időzítések mentése és betöltése .txt fájlokból
-- Több időzítésfájl kezelése
-- Új időzítésfájl létrehozása
+## **Main Features**
 
-### GPIO vezérlés (Raspberry Pi Pico)
-- HIGH és LOW jel küldése
-- Automatikus USB port felismerés
-- Pico válaszainak naplózása
+### **Schedules**
+- Add time entries (HH:MM:SS)
+- Save and load schedules from .txt files
+- Manage multiple schedule files
+- Create new schedule files
 
-### Impulzus mód
-- Folyamatos váltakozó HIGH és LOW jelzés
-- Manuális egyszeri impulzus (trigger)
+### **GPIO Control (Raspberry Pi Pico)**
+- Send HIGH and LOW signals
+- Automatic USB port detection
+- Log Pico responses
 
-### Időkezelés
-- NTP idő lekérése induláskor
-- Másodpercenként frissülő belső óra
-- Kézi időállítás menüből
+### **Impulse Mode**
+- Continuous alternating HIGH and LOW signals
+- Manual single impulse (trigger)
 
-### Hétvégi működés
-- Hétvégi csengés engedélyezése vagy tiltása
-- Scheduler csak engedélyezett napokon fut
+### **Time Handling**
+- Fetch NTP time at startup
+- Internal clock updated every second
+- Manual time adjustment from menu
 
-### Fejlesztői konzol
-- Kézi HIGH, LOW és TRIGGER parancsok
-- Log megtekintése és törlése
+### **Weekend Operation**
+- Enable or disable weekend ringing
+- Scheduler runs only on allowed days
 
-## Fő menüpontok
+### **Developer Console**
+- Manual HIGH, LOW, and TRIGGER commands
+- View and clear logs
 
-1. Időzítések kezelése  
-2. Be vagy Ki kapcsolás  
-3. Impulzus mód  
-4. Fejlesztői konzol  
-5. Idő beállítása  
-6. Időzítésfájl kiválasztása  
-7. Hétvégi működés engedélyezése  
+---
 
-## Fájlkezelés
+## **Main Menu Items**
 
-Az időzítések egyszerű szövegfájlokban tárolódnak.  
-Egy fájl egy időzítéslistát tartalmaz, soronként egy időponttal.
+1. Manage schedules  
+2. Turn system ON or OFF  
+3. Impulse mode  
+4. Developer console  
+5. Set time  
+6. Select schedule file  
+7. Enable weekend operation  
 
-Példa:
+---
+
+## **File Handling**
+
+Schedules are stored in simple text files.  
+Each file contains a list of schedule times, one per line.
+
+Example:
 
 ```
 07:45:00
@@ -57,62 +63,70 @@ Példa:
 13:15:00
 ```
 
-A fájlok automatikusan megjelennek a menüben és kiválaszthatók.
+Files appear automatically in the menu and can be selected.
 
-## Kommunikáció a Pico-val
+---
 
-A program automatikusan megkeresi a Pico USB-s soros portját.  
-A kommunikáció egyszerű szöveges parancsokkal történik:
+## **Communication with the Pico**
+
+The program automatically searches for the Pico’s USB serial port.  
+Communication uses simple text commands:
 
 - HIGH  
 - LOW  
 
-A Pico válasza naplózásra kerül.
+The Pico’s response is logged.
 
-## Scheduler működése
+---
 
-A háttérben futó ütemező másodpercenként ellenőrzi:
-- engedélyezve van-e a rendszer  
-- az aktuális idő megegyezik-e egy időzítéssel  
-- hétvégi működés engedélyezett-e  
+## **Scheduler Operation**
 
-Ha igen, lefut egy egyszeri impulzus.
+The background scheduler checks every second:
+- whether the system is enabled  
+- whether the current time matches a schedule  
+- whether weekend operation is allowed  
 
-## Fordítás és futtatás
+If all conditions are met, a single impulse is executed.
 
-A program Go nyelven készült. Windows és linux is támogatott
+---
 
-Fordítás:
+## **Building and Running**
+
+The program is written in Go. Windows and Linux are supported.
+
+Build:
 
 ```
 go build
 ```
 
-Futtatás:
+Run:
 
 ```
 ./bellringer
 ```
 
-A futtatáshoz szükséges könyvtárak:
+Required libraries:
 - github.com/beevik/ntp
 - github.com/gdamore/tcell/v2
 - github.com/rivo/tview
 - go.bug.st/serial
 
-## Execution Flow
+---
 
-1. A program induláskor megpróbálja betölteni a soros portot a serial.txt fájlból.  
-2. Ha nincs beállítva, felsorolja az elérhető portokat és választást kér.  
-3. Betölti az időzítéseket a kijelölt .txt fájlból.  
-4. Megpróbál NTP időt lekérni, ha nem sikerül, a rendszeridőt használja.  
-5. Elindul a clockTicker, amely másodpercenként frissíti a belső időt.  
-6. Elindul a scheduler, amely másodpercenként ellenőrzi az időzítéseket.  
-7. A felhasználó a menüből vezérelheti a működést:  
-   - időzítések hozzáadása  
-   - impulzus mód bekapcsolása  
-   - kézi HIGH vagy LOW jel küldése  
-   - idő beállítása  
-   - időzítésfájl kiválasztása  
-8. Ha egy időzítés elérkezik, a program lefuttat egy impulzust (HIGH, majd késleltetés, majd LOW).  
-9. A log folyamatosan frissül és megtekinthető a fejlesztői konzolban.
+## **Execution Flow**
+
+1. At startup, the program attempts to load the serial port from `serial.txt`.  
+2. If not set, it lists available ports and asks the user to choose one.  
+3. It loads schedules from the selected `.txt` file.  
+4. It attempts to fetch NTP time; if it fails, system time is used.  
+5. The `clockTicker` starts, updating internal time every second.  
+6. The scheduler starts, checking schedules every second.  
+7. The user can control the system from the menu:  
+   - add schedules  
+   - enable impulse mode  
+   - send manual HIGH or LOW signals  
+   - set time  
+   - select schedule file  
+8. When a schedule time is reached, the program executes an impulse (HIGH, delay, LOW).  
+9. The log updates continuously and can be viewed in the developer console.
