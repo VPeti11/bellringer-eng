@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"bufio"
@@ -51,11 +51,11 @@ func portValaszt() {
 		text := strings.TrimSpace(strings.ToLower(string(data)))
 		if text == "no" {
 			noserial = true
-			fmt.Println("Serial használat letiltva (serial.txt: no)")
+			fmt.Println("Serial usage disabled (serial.txt: no)")
 			return
 		} else if text != "" {
 			KivalasztottPort = text
-			fmt.Println("Serial port betöltve serial.txt-ből:", KivalasztottPort)
+			fmt.Println("Serial port loaded from serial.txt:", KivalasztottPort)
 			return
 		}
 	}
@@ -66,12 +66,12 @@ func portValaszt() {
 	}
 
 	if len(ports) == 0 {
-		fmt.Println("Nincs elérhető soros port!")
+		fmt.Println("No serial ports available!")
 		noserial = true
 		return
 	}
 
-	fmt.Println("Elérhető soros portok:")
+	fmt.Println("Available serial ports:")
 	for i, port := range ports {
 		fmt.Printf("[%d] %s", i, port.Name)
 		if port.IsUSB {
@@ -80,7 +80,7 @@ func portValaszt() {
 		fmt.Println()
 	}
 
-	fmt.Print("Válasszon port számot (vagy írjon 'no' a letiltáshoz): ")
+	fmt.Print("Choose a port number (or type 'no' to disable): ")
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
 	valasz := scanner.Text()
@@ -97,11 +97,11 @@ func portValaszt() {
 	index := -1
 	fmt.Sscanf(valasz, "%d", &index)
 	if index < 0 || index >= len(ports) {
-		log.Fatal("Érvénytelen választás")
+		log.Fatal("Invalid selection")
 	}
 
 	KivalasztottPort = ports[index].Name
-	fmt.Println("Kiválasztott port:", KivalasztottPort)
+	fmt.Println("KivĂˇlasztott port:", KivalasztottPort)
 
 	os.WriteFile("serial.txt", []byte(KivalasztottPort), 0644)
 }
@@ -139,14 +139,14 @@ func playMP3() {
 	f, err := os.Open("ring.mp3")
 	if err != nil {
 		bellRinging = false
-		addLog("Hangfájl nem található: ring.mp3")
+		addLog("Sound file not found: ring.mp3")
 		return
 	}
 
 	streamer, format, err := mp3.Decode(f)
 	if err != nil {
 		bellRinging = false
-		addLog("MP3 dekódolási hiba")
+		addLog("MP3 decoding error")
 		_ = f.Close()
 		return
 	}
@@ -201,7 +201,7 @@ func SetHigh() {
 	}
 	if !pulseMode {
 		if !canRunNow() {
-			addLog("Hétvégi csengés tiltva")
+			addLog("Weekend ringing disabled")
 			return
 		}
 	}
@@ -226,13 +226,13 @@ func jelKuldes(jel string) error {
 		return nil
 	}
 	if KivalasztottPort == "" {
-		addLog("Hiba: nincs kiválasztott port")
-		return fmt.Errorf("nincs kiválasztott port")
+		addLog("Error: no port selected")
+		return fmt.Errorf("nincs kivĂˇlasztott port")
 	}
 
 	if jel != "HIGH" && jel != "LOW" {
-		addLog(fmt.Sprintf("Hiba: érvénytelen jel: %s", jel))
-		return fmt.Errorf("érvénytelen jel: %s", jel)
+		addLog(fmt.Sprintf("Error: invalid signal: %s", jel))
+		return fmt.Errorf("Ă©rvĂ©nytelen jel: %s", jel)
 	}
 
 	mode := &serial.Mode{
@@ -241,29 +241,29 @@ func jelKuldes(jel string) error {
 
 	port, err := serial.Open(KivalasztottPort, mode)
 	if err != nil {
-		addLog(fmt.Sprintf("Hiba port megnyitásakor: %v", err))
+		addLog(fmt.Sprintf("Error opening port: %v", err))
 		return err
 	}
 	defer port.Close()
 
 	_, err = port.Write([]byte(jel + "\n"))
 	if err != nil {
-		addLog(fmt.Sprintf("Hiba jel küldésekor: %v", err))
+		addLog(fmt.Sprintf("Error sending signal: %v", err))
 		return err
 	}
-	addLog(fmt.Sprintf("Jel elküldve: %s", jel))
+	addLog(fmt.Sprintf("Signal sent: %s", jel))
 
 	time.Sleep(100 * time.Millisecond)
 
 	buf := make([]byte, 100)
 	n, err := port.Read(buf)
 	if err != nil {
-		addLog(fmt.Sprintf("Hiba a válasz olvasásakor: %v", err))
+		addLog(fmt.Sprintf("Error reading response: %v", err))
 		return err
 	}
 
 	valasz := strings.TrimSpace(string(buf[:n]))
-	addLog(fmt.Sprintf("Pico válasza: %s", valasz))
+	addLog(fmt.Sprintf("Pico response: %s", valasz))
 
 	return nil
 }
@@ -275,32 +275,32 @@ func main() {
 	go scheduler()
 
 	mainMenu := tview.NewList().
-		AddItem("1. Időzítések", "", '1', func() {
+		AddItem("1. Schedules", "", '1', func() {
 			pages.SwitchToPage("times")
 			app.SetFocus(pages)
 		}).
-		AddItem("2. Be/Ki kapcsolás", "", '2', func() {
+		AddItem("2. ON/OFF", "", '2', func() {
 			enabled = !enabled
-			addLog(fmt.Sprintf("Funkció BE/KI -> %v", enabled))
+			addLog(fmt.Sprintf("FunkciĂł BE/KI -> %v", enabled))
 		}).
-		AddItem("3. Impulzus/Tűzjelző mód", "", '3', func() {
+		AddItem("3. Impulse/Fire alarm mode", "", '3', func() {
 			pulseMode = !pulseMode
-			addLog(fmt.Sprintf("Impulzus mód -> %v", pulseMode))
+			addLog(fmt.Sprintf("Impulse -> %v", pulseMode))
 			if pulseMode {
 				startPulse()
 			}
 		}).
-		AddItem("4. Dev konzol - CSAK KEZELŐNEK", "", '4', func() {
+		AddItem("4. Dev console", "", '4', func() {
 			pages.SwitchToPage("dev")
 			app.SetFocus(pages)
 		}).
-		AddItem("6. Időzítés választás", "", '6', func() {
+		AddItem("6. Schedule switcher", "", '6', func() {
 			pages.SwitchToPage("filemenu")
 			app.SetFocus(pages)
 		}).
-		AddItem("7. Hétvégén csengessen", "", '7', func() {
+		AddItem("7. Ring on weekend", "", '7', func() {
 			enableWeekend = !enableWeekend
-			addLog(fmt.Sprintf("Hétvége -> %v", enableWeekend))
+			addLog(fmt.Sprintf("HĂ©tvĂ©ge -> %v", enableWeekend))
 		})
 
 	statusBar := tview.NewTextView().SetDynamicColors(true)
@@ -322,7 +322,7 @@ func main() {
 			now := time.Now()
 			app.QueueUpdateDraw(func() {
 				statusBar.SetText(fmt.Sprintf(
-					"[yellow]Idő:[white] %s  [green]Engedélyezve:[white]%v (Hétvége:%v)  [blue]Impulzus:[white]%v  [red]Állapot:[white]%s",
+					"[yellow]Time:[white] %s  [green]Enabled:[white]%v (Weekend:%v)  [blue]Pulse:[white]%v  [red]State:[white]%s",
 					now.Format("15:04:05"),
 					enabled,
 					enableWeekend,
@@ -339,14 +339,14 @@ func main() {
 }
 
 func timesMenu() tview.Primitive {
-	input := tview.NewInputField().SetLabel("Idő HH:MM:SS): ")
+	input := tview.NewInputField().SetLabel("Time HH:MM:SS): ")
 	timesInfo := tview.NewTextView().SetDynamicColors(true)
 
 	updateTimesMenu = func() {
 		if len(weekdayTimes) == 0 {
-			timesInfo.SetText("Nincsenek időzítések")
+			timesInfo.SetText("No schedules")
 		} else {
-			timesInfo.SetText("Időzítések:\n" + strings.Join(weekdayTimes, ", "))
+			timesInfo.SetText("Schedules:\n" + strings.Join(weekdayTimes, ", "))
 		}
 	}
 
@@ -357,19 +357,19 @@ func timesMenu() tview.Primitive {
 			txt := input.GetText()
 			_, err := time.Parse("15:04:05", txt)
 			if err != nil {
-				addLog("Hibás időformátum: " + txt)
+				addLog("Invalid time format: " + txt)
 				return
 			}
 
 			weekdayTimes = append(weekdayTimes, txt)
-			addLog("Idő hozzáadva: " + txt)
+			addLog("Time added: " + txt)
 			saveTimesToFile()
 			updateTimesMenu()
 			input.SetText("")
 		}
 	})
 
-	back := tview.NewButton("Vissza/ESC").SetSelectedFunc(func() {
+	back := tview.NewButton("Back/ESC").SetSelectedFunc(func() {
 		pages.SwitchToPage("main")
 		app.SetFocus(pages)
 	})
@@ -395,7 +395,7 @@ func devConsole() tview.Primitive {
 
 	updateLog := func() {
 		console.SetText(
-			"DEV MÓD\n" +
+			"DEV MĂ“D\n" +
 				"H=HIGH  L=LOW  T=TRIGGER  C=CLEAR  B=BACK\n\n" +
 				strings.Join(logLines, "\n"),
 		)
@@ -412,7 +412,7 @@ func devConsole() tview.Primitive {
 		case 'l', 'L':
 			go SetLow()
 		case 't', 'T':
-			addLog("MANUÁLIS IDŐ TRIGGER")
+			addLog("Manual Trigger")
 			go triggerPulseOnce()
 		case 'c', 'C':
 			logLines = nil
@@ -488,7 +488,7 @@ func scheduler() {
 		now := time.Now().Format("15:04:05")
 		for _, t := range weekdayTimes {
 			if t == now {
-				addLog("IDŐZÍTÉS AKTIVÁLVA: " + t)
+				addLog("SCHEDULE TRIGGERED: " + t)
 				go triggerPulseOnce()
 			}
 		}
@@ -503,7 +503,7 @@ func loadTimesFromFile(filename string) {
 	}
 
 	if !strings.HasSuffix(filename, ".txt") {
-		addLog("Csak .txt fájlokat lehet betölteni: " + filename)
+		addLog("Only .txt files can be loaded: " + filename)
 		return
 	}
 
@@ -512,10 +512,10 @@ func loadTimesFromFile(filename string) {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		addLog(fmt.Sprintf("%s nem található, új fájl jön létre", filename))
+		addLog(fmt.Sprintf("%s not found, creating new file", filename))
 		newFile, err := os.Create(filename)
 		if err != nil {
-			addLog("Nem sikerült létrehozni a fájlt: " + err.Error())
+			addLog("Failed to create file: " + err.Error())
 			return
 		}
 		newFile.Close()
@@ -533,9 +533,9 @@ func loadTimesFromFile(filename string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		addLog("Hiba a " + filename + " olvasása közben: " + err.Error())
+		addLog("Error reading file: " + err.Error())
 	} else {
-		addLog(fmt.Sprintf("%d időzítés betöltve a %s fájlból", len(weekdayTimes), filename))
+		addLog(fmt.Sprintf("%d schedule(s) loaded from %s fĂˇjlbĂłl", len(weekdayTimes), filename))
 	}
 
 	if updateTimesMenu != nil {
@@ -545,13 +545,13 @@ func loadTimesFromFile(filename string) {
 
 func saveTimesToFile() {
 	if currentTimeFile == "" {
-		addLog("Nincs kiválasztva fájl a mentéshez")
+		addLog("No choosen file to save")
 		return
 	}
 
 	file, err := os.Create(currentTimeFile)
 	if err != nil {
-		addLog("Nem sikerült menteni az időzítéseket: " + err.Error())
+		addLog("Failed to save file: " + err.Error())
 		return
 	}
 	defer file.Close()
@@ -559,7 +559,7 @@ func saveTimesToFile() {
 	for _, t := range weekdayTimes {
 		_, _ = file.WriteString(t + "\n")
 	}
-	addLog("Időzítések mentve a " + currentTimeFile + " fájlba")
+	addLog("Schedules saved to " + currentTimeFile + " fĂˇjlba")
 }
 
 func fileSelectionMenu() tview.Primitive {
@@ -577,10 +577,10 @@ func fileSelectionMenu() tview.Primitive {
 				app.SetFocus(pages)
 			})
 		}
-		list.AddItem("Új fájl létrehozása", "Create a new schedule file", 0, func() {
+		list.AddItem("Create new file", "Create a new schedule file", 0, func() {
 			showNewFilePrompt(updateList)
 		})
-		list.AddItem("Vissza/ESC", "Return to main menu", 0, func() {
+		list.AddItem("Back/ESC", "Return to main menu", 0, func() {
 			pages.SwitchToPage("main")
 			app.SetFocus(pages)
 		})
@@ -606,10 +606,10 @@ func listAllFiles() []string {
 
 func showNewFilePrompt(updateList func()) {
 	form := tview.NewForm()
-	inputField := tview.NewInputField().SetLabel("Fájl neve").SetFieldWidth(20)
+	inputField := tview.NewInputField().SetLabel("File name").SetFieldWidth(20)
 	form.AddFormItem(inputField)
 
-	form.AddButton("Létrehozás", func() {
+	form.AddButton("Create", func() {
 		name := inputField.GetText()
 		if name != "" {
 			if !strings.HasSuffix(name, ".txt") {
@@ -618,20 +618,20 @@ func showNewFilePrompt(updateList func()) {
 			f, err := os.Create(name)
 			if err == nil {
 				f.Close()
-				addLog("Új fájl létrehozva: " + name)
+				addLog("File created: " + name)
 				updateList()
 			} else {
-				addLog("Nem sikerült létrehozni a fájlt: " + err.Error())
+				addLog("Failed to create file: " + err.Error())
 			}
 		}
 		app.SetRoot(pages, true)
 	})
 
-	form.AddButton("Mégse", func() {
+	form.AddButton("Cancel", func() {
 		app.SetRoot(pages, true)
 	})
 
-	form.SetBorder(true).SetTitle("Új fájl létrehozása").SetTitleAlign(tview.AlignCenter)
+	form.SetBorder(true).SetTitle("Create new file").SetTitleAlign(tview.AlignCenter)
 	app.SetRoot(form, true)
 }
 

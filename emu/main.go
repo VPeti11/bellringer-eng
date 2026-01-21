@@ -13,7 +13,7 @@ import (
 
 func main() {
 
-	fmt.Print("Add meg a soros portot (pl. COM8 vagy /dev/ttyUSB0): ")
+	fmt.Print("Enter the serial port (e.g. COM8 or /dev/ttyUSB0): ")
 	inputReader := bufio.NewReader(os.Stdin)
 	port, _ := inputReader.ReadString('\n')
 	port = strings.TrimSpace(port)
@@ -28,11 +28,11 @@ func main() {
 
 	s, err := serial.OpenPort(config)
 	if err != nil {
-		log.Fatal("Nem sikerült megnyitni a portot:", err)
+		log.Fatal("Failed to open port:", err)
 	}
 	defer s.Close()
 
-	fmt.Println("Pico USB CDC emulátor fut a következő porton:", port)
+	fmt.Println("Pico USB CDC emulator running on port:", port)
 
 	var buffer strings.Builder
 
@@ -52,15 +52,15 @@ func main() {
 			switch parancs {
 			case "HIGH":
 				s.Write([]byte("OK HIGH\n"))
-				fmt.Println("GPIO1 = MAGAS")
+				fmt.Println("GPIO1 = HIGH")
 			case "LOW":
 				s.Write([]byte("OK LOW\n"))
-				fmt.Println("GPIO1 = ALACSONY")
+				fmt.Println("GPIO1 = LOW")
 			case "":
 
 			default:
-				s.Write([]byte("ERR ISMERETLEN\n"))
-				fmt.Println("HIBA ISMERETLEN PARANCS:", parancs)
+				s.Write([]byte("ERR UNKNOWN\n"))
+				fmt.Println("ERROR UNKNOWN COMMAND:", parancs)
 			}
 		} else {
 
