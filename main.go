@@ -7,10 +7,8 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/beevik/ntp"
 	"github.com/faiface/beep"
 	"github.com/faiface/beep/effects"
 	"github.com/faiface/beep/mp3"
@@ -32,8 +30,6 @@ var (
 	logLines        = []string{}
 	pulseRunning    = false
 	currentTimeFile = "idobeall1.txt"
-	currentTime     time.Time
-	timeMutex       = &sync.Mutex{}
 	updateTimesMenu func()
 
 	KivalasztottPort string
@@ -142,12 +138,17 @@ func playMP3() {
 
 	f, err := os.Open("ring.mp3")
 	if err != nil {
-		log.Fatal(err)
+		bellRinging = false
+		addLog("Hangfájl nem található: ring.mp3")
+		return
 	}
 
 	streamer, format, err := mp3.Decode(f)
 	if err != nil {
-		log.Fatal(err)
+		bellRinging = false
+		addLog("MP3 dekódolási hiba")
+		_ = f.Close()
+		return
 	}
 
 	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
@@ -164,7 +165,7 @@ func playMP3() {
 }
 
 func addLog(msg string) {
-	line := fmt.Sprintf("[%s] %s", currentTime.Format("15:04:05"), msg)
+	line := fmt.Sprintf("[%s] %s", time.Now().Format("15:04:05"), msg)
 	logLines = append(logLines, line)
 	if len(logLines) > 100 {
 		logLines = logLines[len(logLines)-100:]
@@ -271,15 +272,6 @@ func main() {
 	portValaszt()
 	loadTimesFromFile(currentTimeFile)
 
-	ntpTime, err := ntp.Time("pool.ntp.org")
-	if err != nil {
-		fmt.Println("NTP lekérés sikertelen, gépi időt használok")
-		currentTime = time.Now()
-	} else {
-		currentTime = ntpTime
-	}
-
-	go clockTicker()
 	go scheduler()
 
 	mainMenu := tview.NewList().
@@ -302,15 +294,11 @@ func main() {
 			pages.SwitchToPage("dev")
 			app.SetFocus(pages)
 		}).
-		AddItem("5. Idő beállítása - CSAK KEZELŐNEK", "", '5', func() {
-			pages.SwitchToPage("settime")
-			app.SetFocus(pages)
-		}).
 		AddItem("6. Időzítés választás", "", '6', func() {
 			pages.SwitchToPage("filemenu")
 			app.SetFocus(pages)
 		}).
-		AddItem("7. Hétvégén csengessen", "", '6', func() {
+		AddItem("7. Hétvégén csengessen", "", '7', func() {
 			enableWeekend = !enableWeekend
 			addLog(fmt.Sprintf("Hétvége -> %v", enableWeekend))
 		})
@@ -325,41 +313,28 @@ func main() {
 	pages.AddPage("main", layout, true, true)
 	pages.AddPage("times", timesMenu(), true, false)
 	pages.AddPage("dev", devConsole(), true, false)
-	pages.AddPage("settime", setTimeMenu(), true, false)
 	pages.AddPage("filemenu", fileSelectionMenu(), true, false)
 
 	go func() {
-		for {
-			timeMutex.Lock()
-			ct := currentTime
-			timeMutex.Unlock()
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			now := time.Now()
 			app.QueueUpdateDraw(func() {
 				statusBar.SetText(fmt.Sprintf(
-					"[yellow]Idő:[white] %s  [white],[green]Engedélyezve:[white]%v [white](Hétvége:%v)  [white],[blue]Impulzus:[white]%v  [white],[red]Állapot:[white]%s [white],[red]Karbantartó: [white]Vaskó Péter[white], [red]Bellringer@Oveges",
-					ct.Format("15:04:05"),
+					"[yellow]Idő:[white] %s  [green]Engedélyezve:[white]%v (Hétvége:%v)  [blue]Impulzus:[white]%v  [red]Állapot:[white]%s",
+					now.Format("15:04:05"),
 					enabled,
 					enableWeekend,
 					pulseMode,
 					statusText,
 				))
 			})
-
-			time.Sleep(time.Second)
 		}
 	}()
 
 	if err := app.SetRoot(pages, true).Run(); err != nil {
 		panic(err)
-	}
-}
-
-func clockTicker() {
-	for {
-		time.Sleep(time.Second)
-		timeMutex.Lock()
-		currentTime = currentTime.Add(time.Second)
-		timeMutex.Unlock()
-		app.QueueUpdateDraw(func() {})
 	}
 }
 
@@ -454,54 +429,6 @@ func devConsole() tview.Primitive {
 	return flex
 }
 
-func setTimeMenu() tview.Primitive {
-	form := tview.NewForm().
-		AddInputField("Idő (HH:MM:SS)", "", 8, nil, nil).
-		AddButton("Vissza/ESC", func() {
-			pages.SwitchToPage("main")
-			app.SetFocus(pages)
-		})
-
-	form.SetBorder(true).SetTitle("Idő beállítása").SetTitleAlign(tview.AlignCenter)
-
-	input := form.GetFormItemByLabel("Idő (HH:MM:SS)").(*tview.InputField)
-	input.SetDoneFunc(func(key tcell.Key) {
-		if key == tcell.KeyEnter {
-			txt := input.GetText()
-			t, err := time.Parse("15:04:05", txt)
-			if err != nil {
-				addLog("Hibás időformátum")
-				return
-			}
-			timeMutex.Lock()
-			currentTime = time.Date(
-				currentTime.Year(),
-				currentTime.Month(),
-				currentTime.Day(),
-				t.Hour(),
-				t.Minute(),
-				t.Second(),
-				0,
-				currentTime.Location(),
-			)
-			timeMutex.Unlock()
-			addLog("Idő kézi beállítva: " + txt)
-			input.SetText("")
-		}
-	})
-
-	input.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			pages.SwitchToPage("main")
-			app.SetFocus(pages)
-			return nil
-		}
-		return event
-	})
-
-	return form
-}
-
 func startPulse() {
 	if pulseRunning {
 		return
@@ -550,24 +477,21 @@ func sleepWithDraw(d time.Duration) {
 }
 
 func scheduler() {
-	for {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
 		if !enabled {
-			time.Sleep(time.Second)
 			continue
 		}
 
-		timeMutex.Lock()
-		now := currentTime.Format("15:04:05")
-		timeMutex.Unlock()
-
+		now := time.Now().Format("15:04:05")
 		for _, t := range weekdayTimes {
 			if t == now {
 				addLog("IDŐZÍTÉS AKTIVÁLVA: " + t)
 				go triggerPulseOnce()
 			}
 		}
-
-		time.Sleep(time.Second)
 	}
 }
 
@@ -712,15 +636,7 @@ func showNewFilePrompt(updateList func()) {
 }
 
 func canRunNow() bool {
-	timeMutex.Lock()
-	ct := currentTime
-	timeMutex.Unlock()
-
-	weekday := ct.Weekday()
+	weekday := time.Now().Weekday()
 	isWeekend := weekday == time.Saturday || weekday == time.Sunday
-
-	if isWeekend && !enableWeekend {
-		return false
-	}
-	return true
+	return !isWeekend || enableWeekend
 }
