@@ -13,7 +13,7 @@ import (
 const (
 	ProgramName = "bellringer"
 	AuthorName  = "VPeti11"
-	GitRepoURL  = "https://github.com/VPeti11/bellringer.git"
+	GitRepoURL  = "https://github.com/VPeti11/bellringer-eng.git"
 )
 
 func main() {

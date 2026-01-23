@@ -456,7 +456,25 @@ func triggerPulseOnce() {
 	time.Sleep(500 * time.Millisecond)
 
 	SetHigh()
-	sleepWithDraw(3 * time.Second)
+	sleepWithDraw(8 * time.Second)
+
+	SetLow()
+
+}
+
+func triggerPulseOnceal() {
+
+	SetLow()
+	time.Sleep(500 * time.Millisecond)
+
+	SetHigh()
+	sleepWithDraw(2 * time.Second)
+
+	SetLow()
+	time.Sleep(2 * time.Second)
+
+	SetHigh()
+	sleepWithDraw(2 * time.Second)
 
 	SetLow()
 
@@ -486,10 +504,16 @@ func scheduler() {
 		}
 
 		now := time.Now().Format("15:04:05")
+
 		for _, t := range weekdayTimes {
 			if t == now {
-				addLog("SCHEDULE TRIGGERED: " + t)
-				go triggerPulseOnce()
+				addLog("IDŐZÍTÉS AKTIVÁLVA: " + t)
+
+				if t == "07:55:00" {
+					go triggerPulseOnceal() // special case
+				} else {
+					go triggerPulseOnce() // default
+				}
 			}
 		}
 	}
