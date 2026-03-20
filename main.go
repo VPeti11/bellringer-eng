@@ -396,7 +396,7 @@ func devConsole() tview.Primitive {
 	updateLog := func() {
 		console.SetText(
 			"DEV MĂ“D\n" +
-				"H=HIGH  L=LOW  T=TRIGGER  C=CLEAR  B=BACK\n\n" +
+				"H=HIGH  L=LOW  T=TRIGGER  C=CLEAR  B=BACK U=Update times\n\n" +
 				strings.Join(logLines, "\n"),
 		)
 	}
@@ -411,6 +411,9 @@ func devConsole() tview.Primitive {
 			go SetHigh()
 		case 'l', 'L':
 			go SetLow()
+		case 'u', 'U':
+			addLog("Updated times")
+			loadTimesFromFile(currentTimeFile)
 		case 't', 'T':
 			addLog("Manual Trigger")
 			go triggerPulseOnce()
@@ -471,7 +474,7 @@ func triggerPulseOnceal() {
 	sleepWithDraw(2 * time.Second)
 
 	SetLow()
-	time.Sleep(2 * time.Second)
+	time.Sleep(700 * time.Millisecond)
 
 	SetHigh()
 	sleepWithDraw(2 * time.Second)
@@ -596,6 +599,7 @@ func fileSelectionMenu() tview.Primitive {
 		for _, f := range files {
 			fname := f
 			list.AddItem(fname, "Load this file", 0, func() {
+				currentTimeFile = fname
 				loadTimesFromFile(fname)
 				pages.SwitchToPage("times")
 				app.SetFocus(pages)
