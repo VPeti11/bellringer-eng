@@ -20,6 +20,7 @@ import (
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 	"golang.org/x/term"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -257,7 +258,7 @@ var (
 	webEnabled  bool
 	webPort     string
 	webUsername string
-	webPassword string
+	webPasswordHash string
 )
 
 func ensureWebConfig() {
@@ -270,7 +271,7 @@ func ensureWebConfig() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("Engedélyezze a web szervert? (true/false) [true]: ")
+	fmt.Print("Enable web server? (true/false) [true]: ")
 	enabledInput, _ := reader.ReadString('\n')
 	enabledInput = strings.TrimSpace(enabledInput)
 	if enabledInput == "" {
@@ -278,7 +279,7 @@ func ensureWebConfig() {
 	}
 	webEnabled = enabledInput == "true"
 
-	fmt.Print("Port a web szerverhez [80]: ")
+	fmt.Print("Port for webserver? [80]: ")
 	portInput, _ := reader.ReadString('\n')
 	portInput = strings.TrimSpace(portInput)
 	if portInput == "" {
@@ -286,7 +287,7 @@ func ensureWebConfig() {
 	}
 	webPort = portInput
 
-	fmt.Print("Felhasználónév [admin]: ")
+	fmt.Print("Username [admin]: ")
 	userInput, _ := reader.ReadString('\n')
 	userInput = strings.TrimSpace(userInput)
 	if userInput == "" {
@@ -294,27 +295,26 @@ func ensureWebConfig() {
 	}
 	webUsername = userInput
 
-	fmt.Print("Jelszó [1234]: ")
+	fmt.Print("Password [1234]: ")
 	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Println()
-	if err != nil {
-		fmt.Println("Hiba a jelszó beolvasásakor, alapértelmezett jelszó lesz: 1234")
-		webPassword = "1234"
-	} else {
-		webPassword = strings.TrimSpace(string(bytePassword))
-		if webPassword == "" {
-			webPassword = "1234"
-		}
+
+	password := "1234"
+	if err == nil && len(bytePassword) > 0 {
+		password = strings.TrimSpace(string(bytePassword))
 	}
 
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	webPasswordHash = string(hash)
+
 	content := fmt.Sprintf(
-		"enabled=%t\nport=%s\nusername=%s\npassword=%s\n",
-		webEnabled, webPort, webUsername, webPassword,
+		"enabled=%t\nport=%s\nusername=%s\npassword_hash=%s\n",
+		webEnabled, webPort, webUsername, webPasswordHash,
 	)
 
 	err = os.WriteFile(configFile, []byte(content), 0644)
 	if err != nil {
-		fmt.Println("Hiba a webconfig.txt létrehozásakor:", err)
+		fmt.Println("Error creating webconfig.txt:", err)
 		return
 	}
 }
@@ -324,7 +324,7 @@ func loadWebConfig() {
 
 	data, err := os.ReadFile(configFile)
 	if err != nil {
-		fmt.Println("Hiba a webconfig.txt olvasásakor:", err)
+		fmt.Println("Error reading webconfig.txt:", err)
 		webEnabled = false
 		return
 	}
@@ -349,8 +349,8 @@ func loadWebConfig() {
 				webPort = value
 			case "username":
 				webUsername = value
-			case "password":
-				webPassword = value
+			case "password_hash":
+				webPasswordHash = value
 		}
 	}
 
@@ -366,7 +366,10 @@ func startWebServer() {
 	authHandler := func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			user, pass, ok := r.BasicAuth()
-			if !ok || user != webUsername || pass != webPassword {
+
+			err := bcrypt.CompareHashAndPassword([]byte(webPasswordHash), []byte(pass))
+
+			if !ok || user != webUsername || err != nil {
 				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 				w.WriteHeader(401)
 				w.Write([]byte("Unauthorized.\n"))
@@ -448,7 +451,7 @@ func startWebServer() {
 		}
 		weekdayTimes = append(weekdayTimes, t)
 		saveTimesToFile()
-		addLog("WEB: idő hozzáadva " + t)
+		addLog("WEB: new time " + t)
 		app.QueueUpdateDraw(func() {
 			if updateTimesMenu != nil {
 				updateTimesMenu()
@@ -477,7 +480,7 @@ func startWebServer() {
 			return
 		}
 		f.Close()
-		addLog("WEB: új fájl " + name)
+		addLog("WEB: new file " + name)
 		w.Write([]byte("ok"))
 	}))
 
@@ -491,7 +494,7 @@ func startWebServer() {
 	mux.HandleFunc("/api/load-file", authHandler(func(w http.ResponseWriter, r *http.Request) {
 		name := r.URL.Query().Get("name")
 		loadTimesFromFile(name)
-		addLog("WEB: fájl betöltve " + name)
+		addLog("WEB: file loaded " + name)
 		app.QueueUpdateDraw(func() {
 			if updateTimesMenu != nil {
 				updateTimesMenu()
@@ -510,7 +513,7 @@ func startWebServer() {
 		}
 		weekdayTimes = newList
 		saveTimesToFile()
-		addLog("WEB: idő törölve " + t)
+		addLog("WEB: time deleted " + t)
 		app.QueueUpdateDraw(func() {
 			if updateTimesMenu != nil {
 				updateTimesMenu()

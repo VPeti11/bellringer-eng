@@ -7,6 +7,8 @@ require (
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/rivo/tview v0.42.0
 	go.bug.st/serial v1.6.4
+	golang.org/x/crypto v0.23.0
+	golang.org/x/term v0.35.0
 )
 
 require (
@@ -23,6 +25,5 @@ require (
 	golang.org/x/image v0.0.0-20190227222117-0694c2d4d067 // indirect
 	golang.org/x/mobile v0.0.0-20190415191353-3e0bab5405d6 // indirect
 	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 )
